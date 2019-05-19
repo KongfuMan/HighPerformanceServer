@@ -11,24 +11,24 @@ package NIO;
 *
 * */
 public class Server {
-    private final static int PORT = 30001;
-    private static ServerHandler serverHandler; //singleton
-
-    public static void startServer(){
-        if (serverHandler != null){
-            return;
-        }
-        synchronized (Server.class){
-            if (serverHandler == null){
-                serverHandler = new ServerHandler(PORT);
-            }
-        }
-        new Thread(serverHandler).start();
-
-    }
-
-    public static void main(String[] args) {
-        Server.startServer();
-    }
+//    private final static int PORT = 30001;
+//    private static ServerHandler serverHandler; //singleton
+//
+//    public static void startServer(){
+//        if (serverHandler != null){
+//            return;
+//        }
+//        synchronized (Server.class){
+//            if (serverHandler == null){
+//                serverHandler = new ServerHandler(PORT);
+//            }
+//        }
+//        new Thread(serverHandler).start();
+//
+//    }
+//
+//    public static void main(String[] args) {
+//        Server.startServer();
+//    }
 
 }

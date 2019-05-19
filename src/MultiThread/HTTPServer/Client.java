@@ -1,8 +1,9 @@
-package SingleThread;
+package MultiThread.HTTPServer;
 
-import java.net.*;
 import java.io.*;
+import java.net.Socket;
 
+// single thread with blocking io
 public class Client
 {
     public static void main(String [] args)

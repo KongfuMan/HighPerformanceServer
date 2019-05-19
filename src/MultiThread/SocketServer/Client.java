@@ -1,4 +1,4 @@
-package BIO;
+package MultiThread.SocketServer;
 
 import java.io.*;
 import java.net.Socket;

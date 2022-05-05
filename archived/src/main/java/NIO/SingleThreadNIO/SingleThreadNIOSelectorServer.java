@@ -20,9 +20,8 @@ public class SingleThreadNIOSelectorServer {
 
     private static Selector selector;
     private static ServerSocketChannel serverSocketChannel;
-//    private static ByteBuffer send;
-//    private static ByteBuffer receive;
     private static SelectionKey serverSelectionKey;
+    private static int totalBytesRead = 0;
 
 
     public static void main(String[] args) throws IOException {
@@ -77,14 +76,14 @@ public class SingleThreadNIOSelectorServer {
             client.configureBlocking(false);
             SelectionKey selectionKey = client.register(selector, 0);
             selectionKey.interestOps(SelectionKey.OP_READ);
-            System.out.println("Press any key to trigger writing large data into client");
-            int read = System.in.read();
-            triggerWriteBigDataToClient(selectionKey);
+//            System.out.println("Press any key to trigger writing large data into client");
+//            int read = System.in.read();
+//            triggerWriteBigDataToClient(selectionKey);
         }
         if (key.isReadable()) { //read from remote client
             // must be socket channel represents a client on server side
             SocketChannel client = (SocketChannel) key.channel();
-            ByteBuffer readBuf = ByteBuffer.allocate(1024);
+            ByteBuffer readBuf = ByteBuffer.allocate(1024*1024);
             try{
                 // read() return -1: client主动的调用close()方法，正常断开连接。
                 // 所以在这种场景下，（服务器程序）需要关闭socketChannel;
@@ -93,6 +92,7 @@ public class SingleThreadNIOSelectorServer {
                 //  1. client 没有数据可读, 但没有调用close().
                 //  2. bytebuffer position == limit, 不能存放更多数据了(可以避免）
                 int bytes = client.read(readBuf);
+                totalBytesRead += bytes;
                 if (bytes < 0){
                     key.cancel();
                     client.close();
@@ -100,8 +100,8 @@ public class SingleThreadNIOSelectorServer {
                     return;
                 }
                 readBuf.flip();
-                System.out.println("Client msg: " + Charset.defaultCharset().decode(readBuf).toString());
-                System.out.println("Client msg length: " + bytes);
+//                System.out.println("Client msg: " + Charset.defaultCharset().decode(readBuf).toString());
+                System.out.println("Client msg length: " + bytes + "   total: " + totalBytesRead);
             }catch (Exception e){
                 key.cancel();
                 client.close();

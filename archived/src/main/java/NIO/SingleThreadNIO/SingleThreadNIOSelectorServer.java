@@ -77,7 +77,6 @@ public class SingleThreadNIOSelectorServer {
             client.configureBlocking(false);
             SelectionKey selectionKey = client.register(selector, 0);
             selectionKey.interestOps(SelectionKey.OP_READ);
-
             System.out.println("Press any key to trigger writing large data into client");
             int read = System.in.read();
             triggerWriteBigDataToClient(selectionKey);
@@ -85,7 +84,7 @@ public class SingleThreadNIOSelectorServer {
         if (key.isReadable()) { //read from remote client
             // must be socket channel represents a client on server side
             SocketChannel client = (SocketChannel) key.channel();
-            ByteBuffer readBuf = ByteBuffer.allocate(16);
+            ByteBuffer readBuf = ByteBuffer.allocate(1024);
             try{
                 // read() return -1: client主动的调用close()方法，正常断开连接。
                 // 所以在这种场景下，（服务器程序）需要关闭socketChannel;
@@ -133,12 +132,8 @@ public class SingleThreadNIOSelectorServer {
      *
      * */
     private static void triggerWriteBigDataToClient(SelectionKey key) throws IOException {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 5000000; i++){
-            sb.append('a');
-        }
         SocketChannel client = (SocketChannel)key.channel();
-        ByteBuffer writeBuf = Charset.defaultCharset().encode(sb.toString());
+        ByteBuffer writeBuf = Charset.defaultCharset().encode(Utility.generateLargeString());
         System.out.println("Start to write");
         int write = client.write(writeBuf);
         System.out.println(write);

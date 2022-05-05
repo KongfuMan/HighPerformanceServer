@@ -117,6 +117,7 @@ public class SingleThreadNIOSelectorServer {
             if (!writeBuf.hasRemaining()){
                 key.attach(null); //GC the attachment
                 key.interestOps(key.interestOps() - OP_WRITE);
+                System.out.println("Write is done");
             }
         }
     }
@@ -133,11 +134,12 @@ public class SingleThreadNIOSelectorServer {
      * */
     private static void triggerWriteBigDataToClient(SelectionKey key) throws IOException {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 300000000; i++){
+        for (int i = 0; i < 5000000; i++){
             sb.append('a');
         }
         SocketChannel client = (SocketChannel)key.channel();
         ByteBuffer writeBuf = Charset.defaultCharset().encode(sb.toString());
+        System.out.println("Start to write");
         int write = client.write(writeBuf);
         System.out.println(write);
         if(writeBuf.hasRemaining()){

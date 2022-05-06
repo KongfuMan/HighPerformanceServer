@@ -1,6 +1,7 @@
-package NIO;
+package NIO.SingleThreadNIO;
 
 import NIO.SingleThreadNIO.Utility;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -14,10 +15,11 @@ import java.util.Iterator;
 import static java.nio.channels.SelectionKey.OP_WRITE;
 
 /**
- * Dummy TCP client that used to connect to server and write data.
+ * Non-blocking TCP client that used to connect to server and read/write data.
  */
-public class Client {
-    private static final int SIZE = (int) 1e9;
+@Slf4j
+public class SingleThreadNioSelectorClient {
+    private static final int SIZE = (int) 1e7;
     private static Selector selector;
     private static SelectionKey selectionKey;
     private static ByteBuffer readBuf;
@@ -56,10 +58,12 @@ public class Client {
                 clientChannel.finishConnect();
                 //connection is done, register READ event
                 selectionKey.interestOps(SelectionKey.OP_READ);
-                System.out.println("Connection done");
+                log.info("Connection with server is done");
+                System.in.read();
+                write();
             } catch (Exception e) {
                 e.printStackTrace();
-                System.out.println("Connection error");
+                log.error("Finishing connection with server failed");
             }
         } else if (selectionKey.isReadable()) {
             ByteBuffer buf = ByteBuffer.allocate(10);
@@ -72,24 +76,24 @@ public class Client {
                     // 只不过读取的字节数为-1.
                     selectionKey.cancel();
                     clientChannel.close();
-                    System.out.println("Client closed");
+                    log.info("Server connection closed");
                     return;
                 }
                 buf.flip();
-                System.out.println("Received msg: " + Charset.defaultCharset().decode(buf).toString());
+                log.info("Received message:  {}", Charset.defaultCharset().decode(buf).toString());
             } catch (Exception e) {
                 selectionKey.cancel();
                 clientChannel.close();
-                System.out.println("Server exception");
+                log.error("Server connection lost exception");
             }
         } else if (selectionKey.isWritable()) {
             ByteBuffer writeBuf = (ByteBuffer)selectionKey.attachment();
             int write = clientChannel.write(writeBuf);
-            System.out.println(write);
+            log.info("{} bytes sent", write);
             if (!writeBuf.hasRemaining()){
                 selectionKey.attach(null); //GC the attachment
                 selectionKey.interestOps(selectionKey.interestOps() - OP_WRITE);
-                System.out.println("Write is done.");
+                log.info("Write operation is done.");
             }
         }
     }
@@ -97,7 +101,7 @@ public class Client {
     private static void write() throws IOException {
         ByteBuffer writeBuf = Charset.defaultCharset().encode(Utility.generateLargeString(SIZE));
         int write = clientChannel.write(writeBuf);
-        System.out.println("Write: " + write);
+        log.info("{} bytes sent", write);
         if (writeBuf.hasRemaining()) {
             selectionKey.interestOps(selectionKey.interestOps() | OP_WRITE);
             selectionKey.attach(writeBuf);

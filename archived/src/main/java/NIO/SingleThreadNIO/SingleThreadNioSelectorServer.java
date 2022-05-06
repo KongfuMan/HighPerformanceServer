@@ -1,5 +1,7 @@
 package NIO.SingleThreadNIO;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -16,9 +18,9 @@ import static java.nio.channels.SelectionKey.OP_WRITE;
 
 /**
  * Single threaded non-blocking TCP server by using selector
- *
- * */
-public class SingleThreadNIOSelectorServer {
+ */
+@Slf4j
+public class SingleThreadNioSelectorServer {
     private final static int PORT = 30001;
 
     private static Selector selector;
@@ -72,54 +74,53 @@ public class SingleThreadNIOSelectorServer {
 
     public static void processSelectionKey(SelectionKey key) throws IOException {
         if (key.isAcceptable()) {
-            // OP_ACCEPT 事件一定发生在server socket channel之中
-            ServerSocketChannel server = (ServerSocketChannel) key.channel();
+            // OP_ACCEPT事件一定发生在server socket channel之中
+            ServerSocketChannel server = (ServerSocketChannel)key.channel();
+
+            // 返回null, 对于non-blocking mode, 如果没有pending connections
+            // 所以必须结合selector使用，当检测到acceptable的时候,可以返回client。
             SocketChannel client = server.accept();
-            System.out.println("Client connected");
+            log.info("Server is ready to accept connection");
             client.configureBlocking(false);
-            SelectionKey selectionKey = client.register(selector, 0);
-            selectionKey.interestOps(SelectionKey.OP_READ);
-//            System.out.println("Press any key to trigger writing large data into client");
-//            int read = System.in.read();
-//            triggerWriteBigDataToClient(selectionKey);
+            client.register(selector, SelectionKey.OP_READ);
         }
         if (key.isReadable()) { //read from remote client
-            // must be socket channel represents a client on server side
+            // Associated channel must be a socket channel representing a client on server side
             SocketChannel client = (SocketChannel) key.channel();
-            ByteBuffer readBuf = ByteBuffer.allocate(1024*1024);
-            try{
+            ByteBuffer readBuf = ByteBuffer.allocate(1024 * 1024);
+            try {
                 // read() return -1: client主动的调用close()方法，正常断开连接。
-                // 所以在这种场景下，（服务器程序）需要关闭socketChannel;
+                // 所以在这种场景下，(服务器程序)需要关闭socketChannel;
                 //
-                // read返回0: 有2种情况
-                //  1. client 没有数据可读, 但没有调用close().
+                // read() return 0, 有2种情况:
+                //  1. 当不用selector的时候，一般会用infinite loop read() 不断读取数据,
+                //  如果client channel是non-blocking的话，此时不会等待，而是直接返回0.
                 //  2. bytebuffer position == limit, 不能存放更多数据了(可以避免）
                 int bytes = client.read(readBuf);
                 totalBytesRead += bytes;
-                if (bytes < 0){
+                if (bytes < 0) {
                     key.cancel();
                     client.close();
-                    System.out.println("Client closed");
+                    log.info("Client closed");
                     return;
                 }
                 readBuf.flip();
-//                System.out.println("Client msg: " + Charset.defaultCharset().decode(readBuf).toString());
-                System.out.println("Client msg length: " + bytes + "   total: " + totalBytesRead);
-            }catch (Exception e){
+                log.info("{} bytes received, total: {} bytes ", bytes, totalBytesRead);
+            } catch (Exception e) {
                 key.cancel();
                 client.close();
-                System.out.println("Client connection break unexpectedly");
+                log.error("Client connection lost unexpectedly");
             }
         }
-        if (key.isWritable()) { //write into remote client
+        if (key.isWritable()) { // write into remote client
             SocketChannel client = (SocketChannel) key.channel();
-            ByteBuffer writeBuf = (ByteBuffer)key.attachment();
+            ByteBuffer writeBuf = (ByteBuffer) key.attachment();
             int write = client.write(writeBuf);
-            System.out.println(write);
-            if (!writeBuf.hasRemaining()){
+            log.info("{} bytes was sent.", write);
+            if (!writeBuf.hasRemaining()) {
                 key.attach(null); //GC the attachment
-                key.interestOps(key.interestOps() - OP_WRITE);
-                System.out.println("Write is done");
+                key.interestOps(key.interestOps() - OP_WRITE); //remove write ops from interest set.
+                log.info("Write operation is done.");
             }
         }
     }
@@ -132,16 +133,17 @@ public class SingleThreadNIOSelectorServer {
      * OP_WRITE, 那么selector就会关注该channel的isWritable时间，等下次channel is ready
      * for write的时候再调用channel.write(buf)方法，确保此次可以写入时再写入，从而避免了
      * 浪费cpu时间
-     *
-     * */
-    private static void triggerWriteBigDataToClient(SelectionKey key) throws IOException {
-        SocketChannel client = (SocketChannel)key.channel();
-        ByteBuffer writeBuf = Charset.defaultCharset().encode(Utility.generateLargeString());
-        System.out.println("Start to write");
+     */
+    private static void write(SelectionKey key, Object msg) throws IOException {
+        ByteBuffer writeBuf = Charset.defaultCharset().encode(msg.toString());
+        SocketChannel client = (SocketChannel) key.channel();
+        log.info("Initiate writing data to client");
         int write = client.write(writeBuf);
-        System.out.println(write);
-        if(writeBuf.hasRemaining()){
+        log.info("{} bytes was sent.", write);
+        if (writeBuf.hasRemaining()) {
             // 这里同时关注读取client 和 写入client
+            // Liang: 应为TCP是全双工通信（duplex), 所以数据可以同时进行双向传输
+            // 所以必须同时监听客户端的读写事件。
             key.interestOps(key.interestOps() | OP_WRITE);
             key.attach(writeBuf);
         }

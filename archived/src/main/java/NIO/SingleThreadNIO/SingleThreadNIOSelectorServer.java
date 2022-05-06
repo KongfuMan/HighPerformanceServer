@@ -14,7 +14,10 @@ import java.util.Set;
 import static java.nio.channels.SelectionKey.OP_ACCEPT;
 import static java.nio.channels.SelectionKey.OP_WRITE;
 
-// single thread non blocking socket by using selector
+/**
+ * Single threaded non-blocking TCP server by using selector
+ *
+ * */
 public class SingleThreadNIOSelectorServer {
     private final static int PORT = 30001;
 

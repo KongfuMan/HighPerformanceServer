@@ -58,6 +58,7 @@ public class SingleThreadNioSelectorClient {
                 //connection is done, register READ event
                 selectionKey.interestOps(SelectionKey.OP_READ);
                 log.info("Connection with server is done");
+                write();
             } catch (Exception e) {
                 e.printStackTrace();
                 log.error("Finishing connection with server failed");
@@ -89,7 +90,7 @@ public class SingleThreadNioSelectorClient {
             log.info("{} bytes sent", write);
             if (!writeBuf.hasRemaining()) {
                 selectionKey.attach(null); //GC the attachment
-                selectionKey.interestOps(selectionKey.interestOps() - OP_WRITE);
+                selectionKey.interestOps(selectionKey.interestOps() & ~OP_WRITE);
                 log.info("Write operation is done.");
             }
         }

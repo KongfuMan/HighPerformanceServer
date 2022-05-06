@@ -80,9 +80,10 @@ public class SingleThreadNioSelectorServer {
             // 返回null, 对于non-blocking mode, 如果没有pending connections
             // 所以必须结合selector使用，当检测到acceptable的时候,可以返回client。
             SocketChannel client = server.accept();
-            log.info("Server is ready to accept connection");
+            log.info("Client channel active");
             client.configureBlocking(false);
-            client.register(selector, SelectionKey.OP_READ);
+            SelectionKey clientKey = client.register(selector, SelectionKey.OP_READ);
+            write(clientKey, Utility.generateLargeString());
         }
         if (key.isReadable()) { //read from remote client
             // Associated channel must be a socket channel representing a client on server side
@@ -119,7 +120,7 @@ public class SingleThreadNioSelectorServer {
             log.info("{} bytes was sent.", write);
             if (!writeBuf.hasRemaining()) {
                 key.attach(null); //GC the attachment
-                key.interestOps(key.interestOps() - OP_WRITE); //remove write ops from interest set.
+                key.interestOps(key.interestOps() & ~OP_WRITE); //remove write ops from interest set.
                 log.info("Write operation is done.");
             }
         }

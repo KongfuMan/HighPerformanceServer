@@ -1,6 +1,5 @@
 package NIO.SingleThreadNIO;
 
-import NIO.SingleThreadNIO.Utility;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -59,8 +58,6 @@ public class SingleThreadNioSelectorClient {
                 //connection is done, register READ event
                 selectionKey.interestOps(SelectionKey.OP_READ);
                 log.info("Connection with server is done");
-                System.in.read();
-                write();
             } catch (Exception e) {
                 e.printStackTrace();
                 log.error("Finishing connection with server failed");
@@ -87,10 +84,10 @@ public class SingleThreadNioSelectorClient {
                 log.error("Server connection lost exception");
             }
         } else if (selectionKey.isWritable()) {
-            ByteBuffer writeBuf = (ByteBuffer)selectionKey.attachment();
+            ByteBuffer writeBuf = (ByteBuffer) selectionKey.attachment();
             int write = clientChannel.write(writeBuf);
             log.info("{} bytes sent", write);
-            if (!writeBuf.hasRemaining()){
+            if (!writeBuf.hasRemaining()) {
                 selectionKey.attach(null); //GC the attachment
                 selectionKey.interestOps(selectionKey.interestOps() - OP_WRITE);
                 log.info("Write operation is done.");

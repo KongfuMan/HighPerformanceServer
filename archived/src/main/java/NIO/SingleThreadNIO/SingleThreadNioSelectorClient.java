@@ -52,13 +52,15 @@ public class SingleThreadNioSelectorClient {
     private static void processSelectionKey() throws IOException {
         if (selectionKey.isConnectable()) {
             try {
-                //this method may be invoked to complete the connection sequence
+                // this method may be invoked to complete the connection sequence
                 // 还记得server之中的我们讲过对于一个ready的channel, 要么处理，要么取消
                 // 这个finishConnect()方法就是对connectable event的处理
-                clientChannel.finishConnect();
-                //connection is done, register READ event
-                selectionKey.interestOps(SelectionKey.OP_READ);
-                log.info("Connection with server is done");
+                if (clientChannel.finishConnect()) {
+                    // connection has established, register READ event
+                    selectionKey.interestOpsAnd(~SelectionKey.OP_CONNECT);
+                    selectionKey.interestOpsOr(SelectionKey.OP_READ);
+                    log.info("Connection with server is done");
+                }
                 write();
             } catch (Exception e) {
                 e.printStackTrace();

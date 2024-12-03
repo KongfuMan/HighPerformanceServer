@@ -71,8 +71,8 @@ public class SingleThreadNioSelectorClient {
             try {
                 // return 0: 表示等待server发送数据过来，但是由于是非阻塞的，所以
                 // 返回0.
-                int read = clientChannel.read(buf);
-                if (read < 0) {
+                int nRead = clientChannel.read(buf);
+                if (nRead < 0) {
                     // return -1: server主动的调用close()方法，此时channel仍然是可读的，
                     // 只不过读取的字节数为-1.
                     selectionKey.cancel();

@@ -39,7 +39,7 @@ public class SingleThreadNioSelectorClient {
         readBuf = ByteBuffer.allocate(1024);
         while (true) {
             // blocking if there is interested operations ready
-            selector.select();
+            selector.selectNow();
             Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
             while (iterator.hasNext()) {
                 iterator.next();

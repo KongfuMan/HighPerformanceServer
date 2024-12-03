@@ -93,8 +93,8 @@ public class SingleThreadNioSelectorClient {
             int write = clientChannel.write(writeBuf);
             log.info("{} bytes sent", write);
             if (!writeBuf.hasRemaining()) {
-                selectionKey.attach(null); //GC the attachment
-                selectionKey.interestOps(selectionKey.interestOps() & ~OP_WRITE);
+                selectionKey.attach(null); // GC the attachment
+                selectionKey.interestOpsAdd(~SelectionKey.OP_WRITE);
                 log.info("Write operation is done.");
             }
         }

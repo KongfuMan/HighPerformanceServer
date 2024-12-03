@@ -61,7 +61,6 @@ public class SingleThreadNioSelectorClient {
                     selectionKey.interestOpsOr(SelectionKey.OP_READ);
                     log.info("Connection with server is done");
                 }
-                write();
             } catch (Exception e) {
                 e.printStackTrace();
                 log.error("Finishing connection with server failed");

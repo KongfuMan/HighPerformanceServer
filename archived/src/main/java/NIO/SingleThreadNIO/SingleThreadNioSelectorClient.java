@@ -30,6 +30,7 @@ public class SingleThreadNioSelectorClient {
         clientChannel.configureBlocking(false);
 
         // non-blocking initiate connect request to server
+        // if return true, the connect is established immediately.
         boolean connected = clientChannel.connect(new InetSocketAddress(8082));
         if (!connected) {
             // if the connection is not done immediately, register into selector

@@ -65,7 +65,8 @@ public class SingleThreadNioSelectorClient {
                 e.printStackTrace();
                 log.error("Finishing connection with server failed");
             }
-        } else if (selectionKey.isReadable()) {
+        } 
+        if (selectionKey.isReadable()) {
             ByteBuffer buf = ByteBuffer.allocate(10);
             try {
                 // return 0: 表示等待server发送数据过来，但是由于是非阻塞的，所以
@@ -86,7 +87,8 @@ public class SingleThreadNioSelectorClient {
                 clientChannel.close();
                 log.error("Server connection lost exception");
             }
-        } else if (selectionKey.isWritable()) {
+        } 
+        if (selectionKey.isWritable()) {
             ByteBuffer writeBuf = (ByteBuffer) selectionKey.attachment();
             int write = clientChannel.write(writeBuf);
             log.info("{} bytes sent", write);

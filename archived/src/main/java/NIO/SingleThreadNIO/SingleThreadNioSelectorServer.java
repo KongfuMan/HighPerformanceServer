@@ -107,8 +107,4 @@ public class SingleThreadNioSelectorServer {
             }
         }
     }
-
-    static String readBufferToString(ByteBuffer buff) {
-        return Charset.defaultCharset().decode(buff).toString();
-    }
 }

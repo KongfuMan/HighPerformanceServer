@@ -84,7 +84,7 @@ public class SingleThreadNioSelectorServer {
                     return;
                 }
                 readBuff.flip(); // prepare to read by application.
-                log.info("Received client ({}) message: {}", channel.getRemoteAddress(), readBufferToString(readBuff));
+                log.info("Received client ({}) message: {}", channel.getRemoteAddress(), Utility.readBufferToString(readBuff));
             } catch (Exception e) {
                 key.cancel();
                 channel.close();

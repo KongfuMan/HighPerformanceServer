@@ -76,7 +76,7 @@ public class SingleThreadNioSelectorClient {
                     return;
                 }
                 readBuff.flip();
-                log.info("Received message:  {}", readBufferToString(readBuff));
+                log.info("Received message:  {}", Utility.readBufferToString(readBuff));
             } catch (Exception e) {
                 selectionKey.cancel();
                 clientChannel.close();
@@ -93,9 +93,5 @@ public class SingleThreadNioSelectorClient {
                 log.info("Write operation is done.");
             }
         }
-    }
-
-    static String readBufferToString(ByteBuffer buff) {
-        return Charset.defaultCharset().decode(buff).toString();
     }
 }

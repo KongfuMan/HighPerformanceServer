@@ -16,11 +16,11 @@ import static java.nio.channels.SelectionKey.OP_WRITE;
 /**
  * Non-blocking TCP client that used to connect to server and read/write data.
  */
-@Slf4j
+@Slf4j(topic = "SingleThreadNioSelectorClient")
 public class SingleThreadNioSelectorClient {
     private static final int SIZE = (int) 1e7;
+    private static final int EOF = -1;
     private static Selector selector;
-    private static SelectionKey selectionKey;
     private static ByteBuffer readBuf;
     private static SocketChannel clientChannel;
 
@@ -29,12 +29,11 @@ public class SingleThreadNioSelectorClient {
         clientChannel = SocketChannel.open();
         clientChannel.configureBlocking(false);
 
-        // non-blocking initiate connect request to server
-        // if return true, the connect is established immediately.
+        // tentatively initiate non-blocking connection to server
+        // if return true, the connection is established immediately.
         boolean connected = clientChannel.connect(new InetSocketAddress(8082));
         if (!connected) {
-            // if the connection is not done immediately, register into selector
-            selectionKey = clientChannel.register(selector, SelectionKey.OP_CONNECT);
+            clientChannel.register(selector, SelectionKey.OP_CONNECT);
         }
         readBuf = ByteBuffer.allocate(1024);
         while (true) {
@@ -42,14 +41,14 @@ public class SingleThreadNioSelectorClient {
             selector.selectNow();
             Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
             while (iterator.hasNext()) {
-                iterator.next();
+                SelectionKey selectionKey = iterator.next();
                 iterator.remove();
-                processSelectionKey();
+                processSelectionKey(selectionKey);
             }
         }
     }
 
-    private static void processSelectionKey() throws IOException {
+    private static void processSelectionKey(SelectionKey selectionKey) throws IOException {
         if (selectionKey.isConnectable()) {
             try {
                 // this method may be invoked to complete the connection sequence
@@ -57,9 +56,8 @@ public class SingleThreadNioSelectorClient {
                 // 这个finishConnect()方法就是对connectable event的处理
                 if (clientChannel.finishConnect()) {
                     // connection has established, register READ event
-                    selectionKey.interestOpsAnd(~SelectionKey.OP_CONNECT);
-                    selectionKey.interestOpsOr(SelectionKey.OP_READ);
-                    log.info("Connection with server is done");
+                    selectionKey.interestOps(selectionKey.interestOps() & ~SelectionKey.OP_CONNECT | SelectionKey.OP_READ);
+                    log.info("Connection with server is established");
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -67,25 +65,22 @@ public class SingleThreadNioSelectorClient {
             }
         } 
         if (selectionKey.isReadable()) {
-            ByteBuffer buf = ByteBuffer.allocate(10);
+            ByteBuffer readBuff = ByteBuffer.allocate(10);
             try {
-                // return 0: 表示等待server发送数据过来，但是由于是非阻塞的，所以
-                // 返回0.
-                int nRead = clientChannel.read(buf);
-                if (nRead < 0) {
+                int nRead = clientChannel.read(readBuff);
+                if (nRead == EOF) {
                     // return -1: server主动的调用close()方法，此时channel仍然是可读的，
-                    // 只不过读取的字节数为-1.
                     selectionKey.cancel();
                     clientChannel.close();
                     log.info("Server connection closed");
                     return;
                 }
-                buf.flip();
-                log.info("Received message:  {}", Charset.defaultCharset().decode(buf).toString());
+                readBuff.flip();
+                log.info("Received message:  {}", readBufferToString(readBuff));
             } catch (Exception e) {
                 selectionKey.cancel();
                 clientChannel.close();
-                log.error("Server connection lost exception");
+                log.error("Read from server failed.");
             }
         } 
         if (selectionKey.isWritable()) {
@@ -94,19 +89,13 @@ public class SingleThreadNioSelectorClient {
             log.info("{} bytes sent", write);
             if (!writeBuf.hasRemaining()) {
                 selectionKey.attach(null); // GC the attachment
-                selectionKey.interestOpsAdd(~SelectionKey.OP_WRITE);
+                selectionKey.interestOps(selectionKey.interestOps() & ~SelectionKey.OP_WRITE);
                 log.info("Write operation is done.");
             }
         }
     }
 
-    private static void write() throws IOException {
-        ByteBuffer writeBuf = Charset.defaultCharset().encode(Utility.generateLargeString(SIZE));
-        int write = clientChannel.write(writeBuf);
-        log.info("{} bytes sent", write);
-        if (writeBuf.hasRemaining()) {
-            selectionKey.interestOps(selectionKey.interestOps() | OP_WRITE);
-            selectionKey.attach(writeBuf);
-        }
+    static String readBufferToString(ByteBuffer buff) {
+        return Charset.defaultCharset().decode(buff).toString();
     }
 }
